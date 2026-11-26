@@ -70,6 +70,30 @@
   .flyer-add{border-top:1px solid var(--line);padding-top:16px;margin-top:4px;}
   .flyer-name-input{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:3px;font-family:'Work Sans',sans-serif;font-size:13px;margin-bottom:10px;box-sizing:border-box;}
   .flyer-name-input:focus{outline:none;border-color:var(--accent);}
+
+  /* ---- Envío por mail ---- */
+  .btn.mail{background:#fff;color:var(--ink);border:1px solid var(--ink);}
+  .mail-overlay{position:fixed;inset:0;background:rgba(20,17,15,.55);display:none;align-items:flex-start;justify-content:center;z-index:9999;overflow-y:auto;padding:40px 16px;}
+  .mail-overlay.open{display:flex;}
+  .mail-modal{background:#fff;border-radius:6px;width:100%;max-width:560px;padding:26px 26px 22px;box-shadow:0 20px 50px rgba(0,0,0,.3);}
+  .mail-modal h2{font-family:'Oswald',sans-serif;font-size:19px;margin-bottom:4px;}
+  .mail-modal .sub{font-size:12px;color:var(--gray);margin-bottom:18px;}
+  .mail-modal label.f{display:block;font-family:'Oswald',sans-serif;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--gray);margin:14px 0 6px;}
+  .mail-modal input[type=text], .mail-modal input[type=email], .mail-modal textarea{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:3px;font-family:'Work Sans',sans-serif;font-size:13px;}
+  .mail-modal textarea{min-height:120px;resize:vertical;line-height:1.5;}
+  .mail-modal input:focus, .mail-modal textarea:focus{outline:none;border-color:var(--accent);}
+  .mail-files{display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;}
+  .mail-file{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--paper);border-radius:4px;font-size:13px;cursor:pointer;}
+  .mail-file input{accent-color:var(--accent);width:16px;height:16px;flex-shrink:0;}
+  .mail-file .mf-meta{margin-left:auto;font-size:11px;color:var(--gray);white-space:nowrap;}
+  .mail-modo{display:flex;gap:8px;flex-wrap:wrap;}
+  .mail-modo label{flex:1;min-width:180px;display:flex;gap:8px;align-items:flex-start;padding:10px 12px;border:1.5px solid var(--line);border-radius:4px;cursor:pointer;font-size:13px;}
+  .mail-modo label.sel{border-color:var(--accent);background:var(--accent-dim);}
+  .mail-modo label.dis{opacity:.45;cursor:not-allowed;}
+  .mail-modo small{display:block;color:var(--gray);font-size:11px;margin-top:2px;}
+  .mail-total{font-size:11px;color:var(--gray);margin-top:6px;}
+  .mail-err{background:#fbe6e4;color:#a4302a;padding:9px 12px;border-radius:3px;font-size:12px;margin-top:14px;display:none;}
+  .mail-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px;}
 </style>
 </head>
 <body>
@@ -125,6 +149,7 @@
           <label class="btn" for="fileInput_es">⬆ Subir / Reemplazar</label>
           <input type="file" id="fileInput_es" accept="application/pdf" onchange="handleFileSelect('es', this)">
           <a class="btn secondary" id="viewBtn_es" href="#" target="_blank" style="display:none;">Ver PDF</a>
+          <button class="btn mail" id="mailBtn_es" onclick="abrirMail(FILES.es && FILES.es.id)" style="display:none;">✉ Enviar por mail</button>
           <button class="btn danger" id="delBtn_es" onclick="deleteCatalog('es')" style="display:none;">Eliminar</button>
         </div>
       </div>
@@ -140,6 +165,7 @@
           <label class="btn" for="fileInput_en">⬆ Upload / Replace</label>
           <input type="file" id="fileInput_en" accept="application/pdf" onchange="handleFileSelect('en', this)">
           <a class="btn secondary" id="viewBtn_en" href="#" target="_blank" style="display:none;">View PDF</a>
+          <button class="btn mail" id="mailBtn_en" onclick="abrirMail(FILES.en && FILES.en.id)" style="display:none;">✉ Send by email</button>
           <button class="btn danger" id="delBtn_en" onclick="deleteCatalog('en')" style="display:none;">Eliminar</button>
         </div>
       </div>
@@ -184,6 +210,38 @@
     </div>
   </div>
 </main>
+
+<div class="mail-overlay" id="mailOverlay" onclick="if(event.target===this) cerrarMail()">
+  <div class="mail-modal">
+    <h2 id="mailTitulo">Enviar por mail</h2>
+    <div class="sub" id="mailSub"></div>
+
+    <label class="f">Archivos a enviar</label>
+    <div class="mail-files" id="mailFiles"></div>
+    <div class="mail-total" id="mailTotal"></div>
+
+    <label class="f">Cómo enviarlos</label>
+    <div class="mail-modo">
+      <label id="modoLblEnlace"><input type="radio" name="mailModo" value="enlace" onchange="actualizarModo()"><span>Enlace de descarga<small>Liviano, llega siempre. Recomendado para catálogos grandes.</small></span></label>
+      <label id="modoLblAdjunto"><input type="radio" name="mailModo" value="adjunto" onchange="actualizarModo()"><span>PDF adjunto<small id="adjuntoNota">Hasta 20 MB en total.</small></span></label>
+    </div>
+
+    <label class="f" for="mailTo">Para</label>
+    <input type="text" id="mailTo" placeholder="cliente@empresa.com (varios separados por coma)">
+    <label class="f" for="mailCc">CC (opcional)</label>
+    <input type="text" id="mailCc" placeholder="">
+    <label class="f" for="mailAsunto">Asunto</label>
+    <input type="text" id="mailAsunto">
+    <label class="f" for="mailMensaje">Mensaje</label>
+    <textarea id="mailMensaje"></textarea>
+
+    <div class="mail-err" id="mailErr"></div>
+    <div class="mail-actions">
+      <button class="btn secondary" onclick="cerrarMail()">Cancelar</button>
+      <button class="btn" id="mailEnviarBtn" onclick="enviarMail()">✉ Enviar</button>
+    </div>
+  </div>
+</div>
 
 <script>
 const SUPABASE_URL = "https://lbbpnnvwtanurtjqgcqv.supabase.co";
@@ -319,7 +377,9 @@ function renderSlot(idioma){
     viewBtn.href = publicUrl;
     viewBtn.style.display = "inline-flex";
     delBtn.style.display = "inline-flex";
+    document.getElementById(`mailBtn_${idioma}`).style.display = "inline-flex";
   }else{
+    document.getElementById(`mailBtn_${idioma}`).style.display = "none";
     infoEl.innerHTML = idioma==='es'
       ? `<span class="cat-empty">Todavía no se subió ningún catálogo en español.</span>`
       : `<span class="cat-empty">No English catalog uploaded yet.</span>`;
@@ -440,6 +500,7 @@ function renderFlyerList(idioma){
         <div class="cat-file-meta">${formatBytes(row.file_size_bytes)} · actualizado ${formatDate(row.updated_at)}</div>
       </div>
       <a class="btn secondary" href="${publicUrl}" target="_blank">Ver</a>
+      <button class="btn mail" onclick="abrirMail('${row.id}')" title="Enviar por mail">✉</button>
       <button class="btn danger" onclick="deleteFlyer('${row.id}','${row.storage_path}')">Eliminar</button>
     </div>`;
   }).join("");
@@ -526,6 +587,130 @@ async function deleteFlyer(id, storagePath){
     showMsg("Error al eliminar: "+e.message, "err");
   }
 }
+
+// ============================================================
+// ENVÍO POR MAIL (Edge Function "catalogos-mail" + Resend)
+// ============================================================
+const MAIL_MAX_ADJUNTO = 20 * 1024 * 1024;
+let MAIL_IDIOMA = "es";
+
+function archivosDeMarca(){
+  const out = [];
+  ['es','en'].forEach(i=>{ if(FILES[i]) out.push(FILES[i]); });
+  ['es','en'].forEach(i=>{ (FLYERS[i]||[]).forEach(f=>{ if(f.business_line===CURRENT_BRAND) out.push(f); }); });
+  return out;
+}
+function etiquetaArchivo(r){
+  return r.tipo === 'flyer'
+    ? `Flyer ${String(r.idioma).toUpperCase()} · ${r.titulo || r.file_name || ''}`
+    : `Catálogo ${String(r.idioma).toUpperCase()}`;
+}
+function textosMail(idioma){
+  const marca = BRANDS[CURRENT_BRAND].label;
+  const firma = (BAUER_SESSION && BAUER_SESSION.nombre) ? BAUER_SESSION.nombre : "";
+  if(idioma === 'en') return {
+    asunto: `${marca} — Catalogue`,
+    mensaje: `Hello,\n\nAs requested, please find our latest catalogue below.\n\nDon't hesitate to contact us if you have any questions.\n\nKind regards,\n${firma}\n${marca}`
+  };
+  return {
+    asunto: `${marca} — Catálogo`,
+    mensaje: `Hola,\n\nTal como hablamos, te envío nuestro catálogo más reciente.\n\nQuedo a tu disposición para cualquier consulta.\n\nUn saludo,\n${firma}\n${marca}`
+  };
+}
+
+function abrirMail(idInicial){
+  const archivos = archivosDeMarca();
+  if(!archivos.length){ showMsg("No hay archivos para enviar en esta marca.", "err"); return; }
+  const inicial = archivos.find(a=>a.id===idInicial) || archivos[0];
+  MAIL_IDIOMA = inicial.idioma === 'en' ? 'en' : 'es';
+
+  document.getElementById("mailTitulo").textContent = MAIL_IDIOMA==='en' ? "Send by email" : "Enviar por mail";
+  document.getElementById("mailSub").textContent = `Sale desde la cuenta de ${BRANDS[CURRENT_BRAND].label}. Las respuestas te llegan a tu email.`;
+  document.getElementById("mailFiles").innerHTML = archivos.map(a=>`
+    <label class="mail-file">
+      <input type="checkbox" value="${a.id}" data-size="${a.file_size_bytes||0}" ${a.id===inicial.id?'checked':''} onchange="actualizarModo()">
+      <span>${escapeHtml(etiquetaArchivo(a))}</span>
+      <span class="mf-meta">${formatBytes(a.file_size_bytes)}</span>
+    </label>`).join("");
+
+  const t = textosMail(MAIL_IDIOMA);
+  document.getElementById("mailAsunto").value = t.asunto;
+  document.getElementById("mailMensaje").value = t.mensaje;
+  document.getElementById("mailTo").value = "";
+  document.getElementById("mailCc").value = "";
+  document.getElementById("mailErr").style.display = "none";
+
+  // Por defecto: adjunto si pesa poco, enlace si es pesado
+  const peso = Number(inicial.file_size_bytes||0);
+  document.querySelector(`input[name=mailModo][value=${peso <= 8*1024*1024 ? 'adjunto' : 'enlace'}]`).checked = true;
+  actualizarModo();
+
+  document.getElementById("mailOverlay").classList.add("open");
+  setTimeout(()=>document.getElementById("mailTo").focus(), 50);
+}
+function cerrarMail(){ document.getElementById("mailOverlay").classList.remove("open"); }
+
+function seleccionMail(){
+  return [...document.querySelectorAll('#mailFiles input:checked')].map(c=>({id:c.value, size:Number(c.dataset.size||0)}));
+}
+function actualizarModo(){
+  const sel = seleccionMail();
+  const total = sel.reduce((s,x)=>s+x.size, 0);
+  const radioAdj = document.querySelector('input[name=mailModo][value=adjunto]');
+  const radioEnl = document.querySelector('input[name=mailModo][value=enlace]');
+  const demasiado = total > MAIL_MAX_ADJUNTO;
+  radioAdj.disabled = demasiado;
+  if(demasiado && radioAdj.checked) radioEnl.checked = true;
+  document.getElementById("modoLblAdjunto").classList.toggle("dis", demasiado);
+  document.getElementById("adjuntoNota").textContent = demasiado ? "Supera los 20 MB: usá el enlace." : "Hasta 20 MB en total.";
+  document.getElementById("modoLblEnlace").classList.toggle("sel", radioEnl.checked);
+  document.getElementById("modoLblAdjunto").classList.toggle("sel", radioAdj.checked);
+  document.getElementById("mailTotal").textContent = sel.length
+    ? `${sel.length} archivo${sel.length>1?'s':''} · ${formatBytes(total)}`
+    : "Elegí al menos un archivo.";
+}
+
+async function enviarMail(){
+  const errEl = document.getElementById("mailErr");
+  const btn = document.getElementById("mailEnviarBtn");
+  errEl.style.display = "none";
+  const sel = seleccionMail();
+  const to = document.getElementById("mailTo").value.trim();
+  if(!sel.length){ errEl.textContent = "Elegí al menos un archivo."; errEl.style.display="block"; return; }
+  if(!to){ errEl.textContent = "Falta el email del destinatario."; errEl.style.display="block"; return; }
+
+  btn.disabled = true; btn.textContent = "Enviando…";
+  try{
+    const r = await fetch(`${SUPABASE_URL}/functions/v1/catalogos-mail`, {
+      method: "POST",
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": "Bearer " + SUPABASE_ANON_KEY,
+        ...tokenHeader(),
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        marca: CURRENT_BRAND,
+        ids: sel.map(x=>x.id),
+        modo: document.querySelector('input[name=mailModo]:checked').value,
+        to,
+        cc: document.getElementById("mailCc").value.trim(),
+        asunto: document.getElementById("mailAsunto").value.trim(),
+        mensaje: document.getElementById("mailMensaje").value
+      })
+    });
+    const d = await r.json().catch(()=>({}));
+    if(!r.ok || !d.ok) throw new Error(d.error || ("Error " + r.status));
+    cerrarMail();
+    showMsg(`Mail enviado a ${escapeHtml(to)}.` + (d.reply_to ? ` Las respuestas llegarán a ${escapeHtml(d.reply_to)}.` : ""));
+  }catch(e){
+    errEl.textContent = e.message;
+    errEl.style.display = "block";
+  }finally{
+    btn.disabled = false; btn.textContent = "✉ Enviar";
+  }
+}
+document.addEventListener("keydown", e=>{ if(e.key==="Escape") cerrarMail(); });
 
 (function(){
   const motivo = motivoSinAcceso();
